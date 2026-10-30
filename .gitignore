@@ -32,3 +32,6 @@ coverage.json
 
 # Deployment info (keep for demo)
 # deployments/
+
+# Editor workspace files
+*.code-workspace
