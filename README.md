@@ -1,343 +1,102 @@
-# 🏥 Disaster Relief Stablecoin System
+# ReliefUSD — disaster relief money that can only be spent on relief
 
-### IIT EBIS 2.0 Hackathon | Bybit – Real World Assets & DeFi Track
+> A stablecoin for disaster aid where the rules live in the money itself. Only **verified victims** receive it, they can only spend it at **approved merchants** for food, medicine, shelter, education or utilities, and **every payment is publicly auditable** on the blockchain.
 
-> **"Funds are programmable and restricted by purpose"**
-
-A transparent, permissioned blockchain system for disaster relief fund distribution that eliminates corruption, enables instant aid delivery, and provides full public auditability.
+Built for the **IIT EBIS 2.0 hackathon** (Bybit – Real World Assets & DeFi track) · Solidity smart contracts on Ethereum (Hardhat, OpenZeppelin) · web dashboard with ethers.js · **35 automated contract tests, all passing**
 
 ---
 
-## 🎯 Problem Statement
+## The problem
 
-Traditional disaster relief funding systems suffer from:
+When a disaster hits, relief money passes through many hands before it reaches the people who need it:
 
-| Problem | Impact |
-|---------|--------|
-| 🐌 **Delays** | Funds take weeks to reach victims due to intermediaries |
-| 💸 **Leakage** | 20-40% of funds lost to corruption and mismanagement |
-| 🔒 **Opacity** | Donors can't track how their money is used |
-| ❌ **No Enforcement** | No control over how aid money is spent |
+- **Slow:** each intermediary adds days or weeks while families need food and medicine now.
+- **Leaky:** once cash or a bank transfer is handed out, nobody can control or see what it is spent on.
+- **Opaque:** donors give money and then lose sight of it. Without proof of where it went, trust (and future donations) drops.
 
----
+## The solution: purpose-bound money
 
-## ✨ Solution
+ReliefUSD (**RUSD**) is a custom ERC-20 stablecoin (1 RUSD = 1 unit of aid) whose transfers are checked against relief rules on every payment:
 
-A **stablecoin-based, permissioned relief fund system** where:
-
-- ✅ Only **verified beneficiaries** receive funds
-- ✅ Funds can only be spent on **approved categories** (Food, Medical, Shelter, etc.)
-- ✅ Every transaction is **permanently auditable** on-chain
-- ✅ Instant fund distribution with **no intermediaries**
-
-### Key Value Propositions
+| Who | What they can do |
+|---|---|
+| **Relief agency (admin)** | Verifies beneficiaries, approves merchants and assigns each a spending category, issues RUSD, can pause the whole system in an emergency |
+| **Beneficiary** (verified victim) | Receives RUSD and can pay **only approved merchants**. Payments to any other wallet, including other beneficiaries, are rejected by the contract |
+| **Merchant** (approved shop, pharmacy, shelter…) | Accepts RUSD in its category: food, medical, shelter, education or utilities |
+| **Donor / public** | Sees distributions and payments on the public dashboard. No wallet needed |
 
 ```
-"Blockchain removes intermediaries"
-"Every transaction is publicly auditable"
-"This system reduces leakage and corruption"
-"Can be deployed instantly in emergencies"
+Agency mints 500 RUSD to a verified family
+Family  → "City Grocery" (approved, FOOD)       ✅ allowed, recorded under FOOD
+Family  → random wallet                         ❌ rejected by the contract
+Family  → another beneficiary (to cash out)     ❌ rejected by the contract
 ```
 
----
+## Why it matters
 
-## 🏗️ Architecture
+- **Aid can't be diverted.** The spending rule is enforced by the token contract on every transfer, so money meant for relief can't quietly be moved elsewhere.
+- **Instant delivery.** Funds reach a verified family in one transaction, without a chain of intermediaries.
+- **Proof for donors.** Every distribution and payment is recorded on-chain with amount, merchant and category, so the agency can show exactly where money went. The dashboard exports the audit trail as CSV or PDF.
+- **Reporting by category, automatically.** Because each payment carries the merchant's category, "how much went to food vs medicine" comes straight from the chain instead of from receipts.
 
-```
-┌─────────────────────────────────────────────────────────────────┐
-│                     DISASTER RELIEF SYSTEM                       │
-├─────────────────────────────────────────────────────────────────┤
-│                                                                  │
-│   ┌─────────────────┐         ┌─────────────────────────────┐   │
-│   │  ReliefUSD      │         │    ReliefFundManager        │   │
-│   │  (RUSD Token)   │◄───────►│                             │   │
-│   │                 │         │  • Beneficiary Whitelist    │   │
-│   │  • ERC-20       │         │  • Merchant Whitelist       │   │
-│   │  • Mint/Burn    │         │  • Category Controls        │   │
-│   │  • Pausable     │         │  • Audit Trail              │   │
-│   └─────────────────┘         └─────────────────────────────┘   │
-│            │                               │                     │
-│            ▼                               ▼                     │
-│   ┌─────────────────────────────────────────────────────────┐   │
-│   │                    SPENDING RULES                        │   │
-│   │                                                          │   │
-│   │   ✅ Beneficiary → Active Merchant     ALLOWED           │   │
-│   │   ❌ Beneficiary → Random Wallet       BLOCKED           │   │
-│   │   ❌ Beneficiary → Inactive Merchant   BLOCKED           │   │
-│   │   ✅ Admin → Anyone                    ALLOWED           │   │
-│   └─────────────────────────────────────────────────────────┘   │
-│                                                                  │
-└─────────────────────────────────────────────────────────────────┘
-```
+## Key design decisions
 
-### Spending Categories
+| Decision | Why |
+|---|---|
+| **Rules in the token, not in an app** (`transfer` asks `ReliefFundManager.isTransferAllowed` before moving funds) | An app can be bypassed; a rule in the token contract applies to every wallet and every interface |
+| **Permissioned, not open** (the agency verifies beneficiaries and merchants) | Relief needs accountability; anonymous recipients would invite fraud |
+| **Merchants carry the category** | Spending is classified at the point of sale, so reports by category need no manual tagging |
+| **Emergency pause** (OpenZeppelin `Pausable`) | If a key is compromised or something goes wrong, all minting and transfers can be frozen at once |
+| **Audited building blocks** (OpenZeppelin `ERC20`, `Ownable`, `Pausable`) | Security-critical code reuses battle-tested libraries instead of hand-written token logic |
+| **Public view without a wallet** | Donors and journalists shouldn't need MetaMask to check where the money went |
 
-| Category | Icon | Use Case |
-|----------|------|----------|
-| FOOD | 🍎 | Grocery stores, food suppliers |
-| MEDICAL | 💊 | Pharmacies, hospitals, clinics |
-| SHELTER | 🏠 | Hotels, temporary housing |
-| EDUCATION | 📚 | Schools, educational supplies |
-| UTILITIES | ⚡ | Electricity, water, gas |
+## What's in the box
 
----
+| Part | Details |
+|---|---|
+| `contracts/ReliefStablecoin.sol` | RUSD token: mint, burn, pause, and transfer checks against the fund manager |
+| `contracts/ReliefFundManager.sol` | Beneficiary and merchant registry, the transfer rule, spending categories and the on-chain transaction history |
+| `contracts/ReliefStablecoinV2.sol` | **Extended design (compiles, not yet deployed or tested):** multi-authority approval for minting, time-locked aid that expires and can be reclaimed, emergency and recovery modes, a beneficiary proof-of-life check, per-category spending totals, and a traceable journey for every token |
+| `frontend/` | Dashboard (ethers.js + MetaMask): admin, beneficiary and merchant views, a public view-only mode with a map of aid (Leaflet), donation flow and audit export (CSV, PDF) |
+| `test/ReliefSystem.test.js` | 35 tests: token basics, pausing, beneficiary and merchant management, the transfer rules, and the audit trail |
 
-## 📁 Project Structure
+## Run it
 
-```
-disaster-relief-system/
-├── contracts/
-│   ├── ReliefStablecoin.sol    # ERC-20 token (ReliefUSD)
-│   └── ReliefFundManager.sol   # Admin & spending controls
-├── scripts/
-│   └── deploy.js               # Deployment script
-├── test/
-│   └── ReliefSystem.test.js    # Comprehensive test suite
-├── frontend/
-│   ├── index.html              # Main dashboard
-│   ├── styles.css              # Styling
-│   ├── app.js                  # Frontend logic
-│   ├── abi.js                  # Contract ABIs
-│   └── config.js               # Deployment config
-├── hardhat.config.js           # Hardhat configuration
-├── package.json                # Dependencies
-└── README.md                   # This file
-```
-
----
-
-## 🚀 Quick Start
-
-### Prerequisites
-
-- Node.js v18+
-- MetaMask browser extension
-- Git
-
-### Installation
+**Prerequisites:** Node.js 18+, and MetaMask for the wallet views.
 
 ```bash
-# Clone and enter project
-cd disaster-relief-system
-
-# Install dependencies
 npm install
+npm test                 # 35 contract tests
 
-# Compile contracts
-npm run compile
+npm run node             # terminal 1: local blockchain (Hardhat)
+npm run deploy:local     # terminal 2: deploy the token and fund manager
+npm run frontend         # terminal 3: dashboard on http://localhost:3000
 ```
 
-### Run Tests
+In MetaMask, add the local network (`http://127.0.0.1:8545`, chain ID 31337) and import one of the test accounts that `npm run node` prints. Account #0 is the relief agency (admin).
 
-```bash
-npm run test
+**Deploy to the Sepolia testnet:** put `SEPOLIA_RPC_URL` and `PRIVATE_KEY` in `.env`, then run `npm run deploy:sepolia`.
+
+## Demo in 3 minutes
+
+1. **Agency:** connect as account #0 and open the admin dashboard.
+2. **Verify a victim:** add account #1 as a beneficiary.
+3. **Approve a shop:** add account #2 as a FOOD merchant, "City Grocery".
+4. **Send aid:** mint 500 RUSD to the beneficiary.
+5. **Spend correctly:** as the beneficiary, pay City Grocery. It succeeds and appears under FOOD.
+6. **Try to divert it:** pay a random wallet. The contract rejects it.
+7. **Show the proof:** open the public view and export the audit trail.
+
+The full walkthrough is in [`HACKATHON_DEMO_GUIDE.md`](HACKATHON_DEMO_GUIDE.md); the no-wallet public view is described in [`PUBLIC_VIEW_GUIDE.md`](PUBLIC_VIEW_GUIDE.md).
+
+## Project layout
+
+```
+contracts/      ReliefStablecoin, ReliefFundManager, ReliefStablecoinV2
+scripts/        deploy.js (local and Sepolia)
+test/           ReliefSystem.test.js (35 tests)
+frontend/       index.html, app.js, abi.js, config.js, styles.css
+deployments/    addresses from the last local deployment
 ```
 
-Expected output:
-```
-  Disaster Relief Stablecoin System
-    ReliefStablecoin - Basic Functionality
-      ✓ Should have correct name and symbol
-      ✓ Should mint tokens to beneficiary
-      ✓ Should block transfers to non-merchants
-    ...
-    Full Demo Flow
-      ✓ Should complete full demo scenario
-```
-
-### Local Deployment
-
-**Terminal 1 - Start Local Blockchain:**
-```bash
-npm run node
-```
-
-**Terminal 2 - Deploy Contracts:**
-```bash
-npm run deploy:local
-```
-
-### Start Frontend
-
-```bash
-npm run frontend
-```
-
-Open `http://localhost:3000` in your browser.
-
----
-
-## 🎬 Demo Flow (3-Minute Judge Demo)
-
-### Setup (30 seconds)
-1. Start local node: `npm run node`
-2. Deploy contracts: `npm run deploy:local`
-3. Start frontend: `npm run frontend`
-4. Open browser and connect MetaMask
-
-### Demo Script (2.5 minutes)
-
-#### Step 1: Admin View
-- Connect MetaMask (Admin wallet - Account #0)
-- Show the Admin Dashboard with stats
-- **"This is the relief agency control panel"**
-
-#### Step 2: Whitelist Beneficiary
-- Add a beneficiary (Account #1 address)
-- **"We verify disaster victims before adding them"**
-
-#### Step 3: Whitelist Merchant
-- Add a FOOD merchant (Account #2 address, name: "City Grocery")
-- **"Only approved vendors can accept relief funds"**
-
-#### Step 4: Mint Relief Tokens
-- Mint 1000 RUSD to the beneficiary
-- **"Funds are instantly distributed - no intermediaries"**
-
-#### Step 5: Switch to Beneficiary
-- Switch MetaMask to Account #1
-- Refresh page, go to Beneficiary tab
-- **"The victim sees their balance and can only spend at approved merchants"**
-
-#### Step 6: Make Valid Purchase ✅
-- Select "City Grocery" merchant
-- Transfer 200 RUSD
-- **"Transaction succeeds - funds used for intended purpose"**
-
-#### Step 7: Attempt Invalid Transfer ❌
-- Try to send to a random address (or use console)
-- **"Transaction BLOCKED - funds cannot be sent to unauthorized recipients"**
-
-#### Step 8: Show Transparency
-- Go to Transparency tab
-- **"Every transaction is publicly auditable on the blockchain"**
-- Show contract addresses for verification
-
-### Key Talking Points
-
-> **"Funds are programmable and restricted by purpose"**
-> - Unlike cash, RUSD tokens can only be spent on approved categories
-
-> **"Blockchain removes intermediaries"**
-> - Direct transfer from agency to victim to merchant
-
-> **"Every transaction is publicly auditable"**
-> - Anyone can verify the transaction history
-
-> **"This system reduces leakage and corruption"**
-> - No way to divert funds to unauthorized recipients
-
-> **"Can be deployed instantly in emergencies"**
-> - Smart contracts deploy in minutes
-
----
-
-## 🌐 Sepolia Testnet Deployment
-
-### Configure Environment
-
-Create `.env` file:
-```env
-SEPOLIA_RPC_URL=https://rpc.sepolia.org
-PRIVATE_KEY=your_private_key_here
-ETHERSCAN_API_KEY=your_etherscan_api_key
-```
-
-### Deploy
-
-```bash
-npm run deploy:sepolia
-```
-
-### Verify Contracts
-
-```bash
-npx hardhat verify --network sepolia <STABLECOIN_ADDRESS>
-npx hardhat verify --network sepolia <FUND_MANAGER_ADDRESS>
-```
-
----
-
-## 📊 Smart Contract Details
-
-### ReliefStablecoin (RUSD)
-
-| Function | Description | Access |
-|----------|-------------|--------|
-| `mint(address, amount)` | Create new tokens | Admin only |
-| `burn(address, amount)` | Destroy tokens | Admin only |
-| `transfer(to, amount)` | Transfer with restrictions | Anyone |
-| `pause() / unpause()` | Emergency controls | Admin only |
-
-### ReliefFundManager
-
-| Function | Description | Access |
-|----------|-------------|--------|
-| `addBeneficiary(address)` | Whitelist victim | Admin only |
-| `removeBeneficiary(address)` | Remove victim | Admin only |
-| `addMerchant(address, category, name)` | Whitelist vendor | Admin only |
-| `removeMerchant(address)` | Remove vendor | Admin only |
-| `isTransferAllowed(from, to, amount)` | Check transfer validity | View |
-| `recordTransfer(from, to, amount)` | Log transaction | Anyone |
-
----
-
-## 🔒 Security Features
-
-1. **Permissioned Access**: Only admin can modify whitelists
-2. **Transfer Restrictions**: Beneficiaries can only pay merchants
-3. **Pausable**: Emergency stop for all operations
-4. **Event Logging**: Complete audit trail on-chain
-5. **No External Dependencies**: No oracles or cross-chain complexity
-
----
-
-## 📈 Future Enhancements (Post-Hackathon)
-
-- [ ] Multi-signature admin control
-- [ ] Spending limits per beneficiary
-- [ ] Time-locked distributions
-- [ ] Mobile wallet integration
-- [ ] Government agency dashboard
-- [ ] Real-time reporting API
-
----
-
-## 🏆 Hackathon Checklist
-
-- [x] Smart contracts (Solidity)
-- [x] Hardhat development framework
-- [x] ERC-20 custom stablecoin
-- [x] Beneficiary whitelisting
-- [x] Merchant whitelisting with categories
-- [x] Transfer restrictions
-- [x] Full event logging
-- [x] Comprehensive tests
-- [x] Frontend dashboard
-- [x] Local deployment
-- [x] Sepolia testnet ready
-- [x] Demo-ready in under 3 minutes
-
----
-
-## 👥 Team
-
-**IIT EBIS 2.0 Hackathon Entry**
-
-Track: Bybit – Real World Assets & DeFi
-
----
-
-## 📄 License
-
-MIT License
-
----
-
-<div align="center">
-
-**Built with ❤️ for disaster victims worldwide**
-
-*"Because every rupee of relief should reach those who need it"*
-
-</div>
+**Stack:** Solidity 0.8.24 · Hardhat · OpenZeppelin Contracts · ethers.js 6 · Leaflet · MetaMask
