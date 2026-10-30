@@ -1,4 +1,4 @@
-# ReliefUSD — disaster relief money that can only be spent on relief
+# AidLock — disaster relief money that can only be spent on relief
 
 > A stablecoin for disaster aid where the rules live in the money itself. Only **verified victims** receive it, they can only spend it at **approved merchants** for food, medicine, shelter, education or utilities, and **every payment is publicly auditable** on the blockchain.
 
@@ -16,7 +16,7 @@ When a disaster hits, relief money passes through many hands before it reaches t
 
 ## The solution: purpose-bound money
 
-ReliefUSD (**RUSD**) is a custom ERC-20 stablecoin (1 RUSD = 1 unit of aid) whose transfers are checked against relief rules on every payment:
+AidLock issues **ReliefUSD (RUSD)**, a custom ERC-20 stablecoin (1 RUSD = 1 unit of aid) whose transfers are checked against relief rules on every payment:
 
 | Who | What they can do |
 |---|---|
