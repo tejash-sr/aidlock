@@ -2,7 +2,7 @@
 
 > A stablecoin for disaster aid where the rules live in the money itself. Only **verified victims** receive it, they can only spend it at **approved merchants** for food, medicine, shelter, education or utilities, and **every payment is publicly auditable** on the blockchain.
 
-Built for the **IIT EBIS 2.0 hackathon** (Bybit – Real World Assets & DeFi track) · Solidity smart contracts on Ethereum (Hardhat, OpenZeppelin) · web dashboard with ethers.js · **35 automated contract tests, all passing**
+**Built solo** for the **IIT EBIS 2.0 hackathon** (Bybit – Real World Assets & DeFi track) · Solidity smart contracts on Ethereum (Hardhat, OpenZeppelin) · web dashboard with ethers.js · **35 automated contract tests, all passing**
 
 ---
 
